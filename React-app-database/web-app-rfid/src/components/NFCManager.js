@@ -7,7 +7,7 @@ const NFCManager = () => {
   const [weight, setWeight] = useState('');
   const [readData, setReadData] = useState([]);
   const [message, setMessage] = useState('');
-
+...
   const handleWrite = async () => {
     try {
       const responseESP = await axios.post('/arduino/write', {
