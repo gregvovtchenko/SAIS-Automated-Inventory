@@ -1,0 +1,88 @@
+.w3-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.w3-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+}
+
+.w3-half {
+  flex: 1;
+  padding: 20px;
+}
+
+.w3-button {
+  background-color: #282c34;
+  color: white;
+  border: none;
+  padding: 15px 32px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 16px;
+  margin: 4px 2px;
+  transition: background-color 0.3s ease;
+  border-radius: 4px;
+}
+
+.w3-button:hover {
+  background-color: #61dafb;
+  color: #282c34;
+}
+
+input[type='text'], input[type='password'] {
+  width: 80%;
+  padding: 12px 20px;
+  margin: 8px 0;
+  display: inline-block;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+input[type='submit'] {
+  width: 80%;
+  background-color: #4CAF50;
+  color: white;
+  padding: 14px 20px;
+  margin: 8px 0;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+input[type='submit']:hover {
+  background-color: #45a049;
+}
+
+.w3-table {
+  width: 100%;
+  margin-top: 20px;
+}
+
+.w3-table th, .w3-table td {
+  text-align: left;
+  padding: 8px;
+}
+
+.w3-table tr:nth-child(even) {
+  background-color: #f2f2f2;
+}
+
+@media screen and (max-width: 768px) {
+  .w3-half {
+    flex-direction: column;
+    flex: none;
+    width: 100%;
+  }
+}
+
+footer {
+  text-align: center;
+  padding: 20px 0;
+}
