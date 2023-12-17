@@ -59,6 +59,7 @@ const NFCManager = () => {
       setMessage('Error: ' + err.message);
     }
   };
+  
 
   return (
     <div>
