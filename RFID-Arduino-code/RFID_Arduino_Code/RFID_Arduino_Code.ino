@@ -10,7 +10,7 @@
 #define SCL_PIN 22 
 
 const char* ssid = "iPhoneGreg";
-const char* password = "greg2011";
+const char* password = "SYSC4907";
 
 Adafruit_PN532 nfc(SDA_PIN, SCL_PIN);
 AsyncWebServer server(3000);
@@ -38,12 +38,14 @@ void setup(void) {
   server.on("/write", HTTP_POST, [](AsyncWebServerRequest *request) {},
   NULL,
   [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
-    DynamicJsonDocument doc(1024);
+    DynamicJsonDocument doc(2048);
     deserializeJson(doc, data);
-    String productName = doc["productName"].as<String>();
     int productID = doc["productID"];
-    int weight = doc["weight"];
-    bool writeSuccess = writeDataToNFC(productName, productID, weight); 
+    String productName = doc["productName"].as<String>();
+    int productType = doc["productType"];
+    int supplierID = doc["supplierID"];
+    int activeStatus = doc["activeStatus"];
+    bool writeSuccess = writeDataToNFC(productID, productName, productType, supplierID, activeStatus); 
     if (writeSuccess) {
       request->send(200, "application/json", "{\"success\":true}");
     } else {
@@ -116,7 +118,7 @@ bool readDataFromNFC(String &productName, int &productID, int &weight) {
     }
 }
 
-bool writeDataToNFC(String productName, int productID, int weight) {
+bool writeDataToNFC(int productID, String productName, int productType, int supplierID, int activeStatus) {
   uint8_t success;
   uint8_t uid[] = { 0, 0, 0, 0, 0, 0, 0 };
   uint8_t uidLength;
@@ -128,10 +130,13 @@ bool writeDataToNFC(String productName, int productID, int weight) {
     Serial.println("Found an NFC card!");
 
     // Blocks to write to (ensure these are safe to write to!)
-    uint8_t blockProductName = 4;
-    uint8_t blockProductID = 5;
-    uint8_t blockWeight = 6;
+    uint8_t blockProductID = 4;
+    uint8_t blockProductName = 5;
+    uint8_t blockProductType = 7;
+    uint8_t blockSupplierID = 8;
+    uint8_t blockActiveStatus = 9;
 
+    // Authenticate and write product name
     // Authenticate and write product name
     if (!authenticateAndWriteBlock(uid, uidLength, blockProductName, productName)) {
       Serial.println("Failed to write Product Name to NFC card.");
@@ -143,15 +148,24 @@ bool writeDataToNFC(String productName, int productID, int weight) {
       Serial.println("Failed to write Product ID to NFC card.");
       return false; // Write failed
     }
-
-    // Authenticate and write weight (as string)
-    if (!authenticateAndWriteBlock(uid, uidLength, blockWeight, String(weight))) {
-      Serial.println("Failed to write Weight to NFC card.");
-      return false; // Write failed
+    
+      // Write product type
+    if (!authenticateAndWriteBlock(uid, uidLength, blockProductType, String(productType))) {
+      Serial.println("Failed to write Product Type to NFC card.");
+      return false;
     }
 
-    // If all data was written successfully to the NFC card, send data to the backend
+    // Write supplier ID
+    if (!authenticateAndWriteBlock(uid, uidLength, blockSupplierID, String(supplierID))) {
+      Serial.println("Failed to write Supplier ID to NFC card.");
+      return false;
+    }
 
+    // Write active status
+    if (!authenticateAndWriteBlock(uid, uidLength, blockActiveStatus, String(activeStatus))) {
+      Serial.println("Failed to write Active Status to NFC card.");
+      return false;
+    }
     return true;  // All data written successfully
   } else {
     Serial.println("Failed to find an NFC card!");
@@ -159,7 +173,7 @@ bool writeDataToNFC(String productName, int productID, int weight) {
   }
 }
 
-
+// make a function to reset the NFC card
 
 bool authenticateAndWriteBlock(uint8_t* uid, uint8_t uidLength, uint8_t block, String data) {
   // Assuming a default MIFARE Classic key

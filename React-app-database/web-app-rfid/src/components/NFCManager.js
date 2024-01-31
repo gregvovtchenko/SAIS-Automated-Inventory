@@ -15,7 +15,7 @@ const NFCManager = () => {
         productID,
         weight
       });
-
+      
       if(responseESP.data.success){
         const responseBackend = await axios.post('/api/addProduct', {
           productName,
@@ -59,7 +59,7 @@ const NFCManager = () => {
       setMessage('Error: ' + err.message);
     }
   };
-  
+
 
   return (
     <div>
