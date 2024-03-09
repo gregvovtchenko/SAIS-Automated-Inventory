@@ -1,0 +1,54 @@
+.login-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 50vh;
+  }
+  
+  .login-form {
+    border: 1px solid #ccc;
+    padding: 20px;
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  }
+  
+  .form-group {
+    margin-bottom: 20px;
+  }
+  
+  .form-group label {
+    display: block;
+    margin-bottom: 5px;
+  }
+  
+  .form-group input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+  }
+  
+  buttonLogin {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 5px;
+    background-color: blue;
+    color: white;
+    cursor: pointer;
+  }
+  
+  /* ... previous CSS */
+
+.forgot-password,
+.register,
+a.register { /* Added a.register to specifically target the anchor tag */
+  color: #0077cc;
+  text-decoration: none;
+  cursor: pointer; /* To indicate clickable items */
+}
+
+.forgot-password:hover,
+.register:hover,
+a.register:hover { /* Added a.register:hover for the hover state */
+  text-decoration: underline;
+}

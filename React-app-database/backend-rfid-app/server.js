@@ -3,13 +3,22 @@ const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const mysql = require('mysql');
+const os = require('os');
+const util = require('util');
+const bcrypt = require('bcrypt');
+const saltRounds = 10;
 
+// Initialize the express application
 const app = express();
-app.use(cors());
-const PORT = 3001;
 
+// Apply middleware
+app.use(cors());
 app.use(bodyParser.json());
 
+// Define the port from environment variable or fallback to default
+const PORT = process.env.PORT || 3002;
+
+// Database pool configuration
 const pool = mysql.createPool({
   host: process.env.DB_HOST || '',
   user: process.env.DB_USER || '',
@@ -18,57 +27,222 @@ const pool = mysql.createPool({
   connectionLimit: 10
 });
 
+// Function to get the server IP address
+function getServerIPAddress() {
+  const networkInterfaces = os.networkInterfaces();
+
+  for (const interfaceDetails of Object.values(networkInterfaces)) {
+    for (const details of interfaceDetails) {
+      if (details.family === 'IPv4' && !details.internal) {
+        return details.address;
+      }
+    }
+  }
+
+  // Return localhost if no external IP found
+  return '127.0.0.1';
+}
+
+app.get('/', (req, res) => {
+  res.send('Hello, World!');
+});
+
 pool.getConnection((err, connection) => {
   if (err) {
     console.error("Error connecting to the database:", err.message);
     return;
   }
   console.log('Connected to the MySQL database.');
-  connection.release();
+  connection.release(); // release the connection back to the pool
 
   app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+    console.log(`Server is running at http://${getServerIPAddress()}:${PORT}`);
   });
 });
 
-app.post('/addProduct', (req, res) => {
-  const { productID, productName, weight } = req.body;
+pool.query = util.promisify(pool.query);
 
-  if (!productID || !productName || typeof weight !== 'number') {
-    return res.status(400).json({ success: false, message: 'Invalid input data' });
+async function executeQuery(sql, params) {
+  return await pool.query(sql, params);
+}
+// Get inventory list
+app.get('/getInventoryList', async (req, res) => {
+  try {
+    const results = await executeQuery('SELECT * FROM Products', []);
+    res.json(results);
+  } catch (error) {
+    console.error('Error getting products list:', error.message);
+    res.status(500).send('Server error');
   }
-
-  const query = 'INSERT INTO Products (productID, productName, weight) VALUES (?, ?, ?)';
-  
-  pool.query(query, [productID, productName, weight], (err, result) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ success: false, message: 'Internal Server Error' });
-    }
-    res.status(201).json({ success: true });
-  });
 });
 
-app.get('/getProduct', (req, res) => {
-  const productID = req.query.productID;
+// Add item to inventory
+// Add item to inventory
+app.post('/addItemToInventory', async (req, res) => {
+  const { productName, productType, supplierID, activeStatus } = req.body;
 
-  if (!productID) {
-    return res.status(400).json({ success: false, message: 'Product ID is required' });
-  }
+  try {
+    // Check if the product already exists in the database
+    const checkSql = 'SELECT * FROM Products WHERE productName = ?';
+    const existingProducts = await executeQuery(checkSql, [productName]);
 
-  const query = 'SELECT * FROM Products WHERE productID = ?';
-
-  pool.query(query, [productID], (err, results) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ success: false, message: 'Internal Server Error' });
-    }
-
-    if (results.length > 0) {
-      const product = results[0];
-      res.status(200).json({ success: true, productName: product.productName, productID: product.productID, weight: product.weight });
+    if (existingProducts.length > 0) {
+      // Product already exists
+      res.status(409).json({ message: 'Product already exists.' });
     } else {
-      res.status(404).json({ success: false, message: 'Product not found' });
+      // Product does not exist, add to database
+        const insertSql = 'INSERT INTO Products (productName, productType, supplierID, activeStatus) VALUES (?, ?, ?, ?)';
+        const insertResult = await executeQuery(insertSql, [productName, productType, supplierID, activeStatus]);
+        const newProductID = insertResult.insertId;
+        res.json({ productID: newProductID, message: 'Product added successfully.' });
     }
-  });
+  } catch (error) {
+    console.error('Error processing request:', error.message);
+    res.status(500).send('Server error');
+  }
 });
+
+app.post('/addSupplier', async (req, res) => {
+  const { supplierName, contactDetails } = req.body;
+
+  try {
+      // Check if the supplier already exists
+      const checkSql = 'SELECT * FROM Suppliers WHERE supplierName = ?';
+      const existingSuppliers = await executeQuery(checkSql, [supplierName]);
+
+      if (existingSuppliers.length > 0) {
+          // Supplier already exists
+          res.status(409).json({ message: 'Supplier already exists.' });
+      } else {
+          // Supplier does not exist, add to database
+          const insertSql = 'INSERT INTO Suppliers (supplierName, contactDetails) VALUES (?, ?)';
+          await executeQuery(insertSql, [supplierName, contactDetails]);
+          res.json({ message: 'Supplier added successfully.' });
+      }
+  } catch (error) {
+      console.error('Error adding supplier:', error.message);
+      res.status(500).send('Server error');
+  }
+});
+// Fetch all suppliers
+app.get('/getSuppliers', async (req, res) => {
+  try {
+    const results = await executeQuery('SELECT * FROM Suppliers', []);
+    res.json(results);
+  } catch (error) {
+    console.error('Error getting suppliers list:', error.message);
+    res.status(500).send('Server error');
+  }
+});
+
+app.delete('/deleteSupplier/:id', async (req, res) => {
+  const { id } = req.params;
+  const sql = 'DELETE FROM Suppliers WHERE supplierID = ?';
+  try {
+    await executeQuery(sql, [id]);
+    res.json({ message: 'Supplier deleted successfully.' });
+  } catch (error) {
+    console.error('Error deleting supplier:', error.message);
+    res.status(500).send('Server error');
+  }
+});
+
+
+
+
+
+
+// Update inventory item
+app.put('/updateInventory', async (req, res) => {
+  const { id, productName, quantity, price } = req.body;
+  const sql = 'UPDATE Inventory SET productName = ?, quantity = ?, price = ? WHERE id = ?';
+  try {
+    await executeQuery(sql, [productName, quantity, price, id]);
+    res.json({ message: 'Inventory item updated successfully.' });
+  } catch (error) {
+    console.error('Error updating inventory item:', error.message);
+    res.status(500).send('Server error');
+  }
+});
+
+// Delete inventory item
+app.delete('/deleteInventoryItem/:id', async (req, res) => {
+  const { id } = req.params;
+  const sql = 'DELETE FROM Products WHERE productID= ?';
+  try {
+    await executeQuery(sql, [id]);
+    res.json({ message: 'Inventory item deleted successfully.' });
+  } catch (error) {
+    console.error('Error deleting inventory item:', error.message);
+    res.status(500).send('Server error');
+  }
+});
+
+// Endpoint to log item movement
+app.post('/recordMovement', async (req, res) => {
+  const { productId, movementType, quantity } = req.body;
+  const sql = 'INSERT INTO ItemMovements (productId, movementType, quantity) VALUES (?, ?, ?)';
+  try {
+    await executeQuery(sql, [productId, movementType, quantity]);
+    res.json({ message: 'Item movement recorded successfully.' });
+  } catch (error) {
+    console.error('Error recording item movement:', error.message);
+    res.status(500).send('Server error');
+  }
+});
+
+// Fetch a single product's details
+app.get('/getProductById/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const results = await executeQuery('SELECT * FROM Products WHERE productID = ?', [id]);
+    if (results.length > 0) {
+      res.json(results[0]);
+    } else {
+      res.status(404).send('Product not found');
+    }
+  } catch (error) {
+    console.error('Error fetching product:', error.message);
+    res.status(500).send('Server error');
+  }
+});
+
+// Fetch item movements
+app.get('/fetchItemMovements', async (req, res) => {
+  try {
+    const results = await executeQuery('SELECT * FROM ItemMovements', []);
+    res.json(results);
+  } catch (error) {
+    console.error('Error fetching item movements:', error.message);
+    res.status(500).send('Server error');
+  }
+});
+
+
+
+
+// USER INFO
+
+app.post('/registerUser', async (req, res) => {
+  const { userName, passwordHash, roleName } = req.body; // Ensure these match your frontend
+
+  try {
+      const checkSql = 'SELECT * FROM Users WHERE userName = ?';
+      const existingUsers = await executeQuery(checkSql, [userName]);
+
+      if (existingUsers.length > 0) {
+          res.status(409).json({ message: 'User already exists.' });
+      } else {
+          // Before inserting, hash the password. Assuming you're using bcrypt for password hashing
+          const hashedPassword = await bcrypt.hash(passwordHash, 10);
+
+          const insertSql = 'INSERT INTO Users (userName, passwordHash, roleName) VALUES (?, ?, ?)';
+          await executeQuery(insertSql, [userName, hashedPassword, roleName]);
+          res.json({ message: 'User added successfully.' });
+      }
+  } catch (error) {
+      console.error('Error adding user:', error.message);
+      res.status(500).send('Server error');
+  }
+});
+

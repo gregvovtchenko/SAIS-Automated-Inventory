@@ -5,7 +5,7 @@ module.exports = function(app) {
   app.use(
     '/api',
     createProxyMiddleware({
-      target: 'http://172.20.10.2:3001',
+      target: 'http://localhost:3002',
       changeOrigin: true,
       pathRewrite: {
         '^/api': ''
@@ -13,16 +13,26 @@ module.exports = function(app) {
     })
   );
 
-
   // Proxy for Arduino server
   app.use(
     '/arduino',
     createProxyMiddleware({
-      target: 'http://172.20.10.9:3000',
+      target: 'http://172.20.10.3:3001',
       changeOrigin: true,
       pathRewrite: {
         '^/arduino': ''
       }
     })
   );
+
+  app.use(
+    '/arduino-weight',
+    createProxyMiddleware({
+      target: 'http://172.20.10.3:3003',
+      changeOrigin: true,
+      pathRewrite: {
+        '^/arduino-weight': ''
+      }
+    })
+  )
 };
