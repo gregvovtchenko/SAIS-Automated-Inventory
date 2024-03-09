@@ -91,59 +91,35 @@ void loop(void) {
 
 bool readDataFromNFC(int &productID, String &productName, int &productType, int &supplierID, int &activeStatus) {
     uint8_t success;
-    uint8_t uid[] = { 0, 0, 0, 0, 0, 0, 0 };
+    uint8_t uid[] = { 0, 0, 0, 0, 0, 0, 0 }; // UID buffer
     uint8_t uidLength;
+    uint8_t data[16]; // Buffer for reading block data
     
     success = nfc.readPassiveTargetID(PN532_MIFARE_ISO14443A, uid, &uidLength);
 
     if (success) {
         Serial.println("Found an NFC card!");
-        
-        uint8_t keya[6] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
-        
-        // Read product name (string)
-        if (nfc.mifareclassic_AuthenticateBlock(uid, uidLength, 4, 0, keya)) {
-          uint8_t data[16];
-          if (nfc.mifareclassic_ReadDataBlock(4, data)) {
-              productID = String((char *)data).toInt();
-          }
+        if (authenticateAndReadBlock(uid, uidLength, 4, data)) {
+            productID = atoi((char *)data); // Parse as needed
         }
-
-        if (nfc.mifareclassic_AuthenticateBlock(uid, uidLength, 5, 0, keya)) {
-          uint8_t data[16];
-          if (nfc.mifareclassic_ReadDataBlock(5, data)) {
-            productName = String((char *)data);
-            
-          }
+        if (authenticateAndReadBlock(uid, uidLength, 5, data)) {
+            productName = String((char *)data); // Parse as needed
         }
-    
-        // Assume block 6 stores weight as a float.
-        if (nfc.mifareclassic_AuthenticateBlock(uid, uidLength, 7, 0, keya)) {
-          uint8_t data[16];
-          if (nfc.mifareclassic_ReadDataBlock(7, data)) {
-            productType = String((char *)data).toInt();
-            
-          }
+        if (authenticateAndReadBlock(uid, uidLength, 7, data)) {
+            productType = atoi((char *)data); // Parse as needed
         }
-        if (nfc.mifareclassic_AuthenticateBlock(uid, uidLength, 8, 0, keya)) {
-          uint8_t data[16];
-          if (nfc.mifareclassic_ReadDataBlock(8, data)) {
-            supplierID = String((char *)data).toInt();
-            
-          }
+        if (authenticateAndReadBlock(uid, uidLength, 8, data)) {
+            supplierID = atoi((char *)data); // Parse as needed
         }
-        if (nfc.mifareclassic_AuthenticateBlock(uid, uidLength, 9, 0, keya)) {
-          uint8_t data[16];
-          if (nfc.mifareclassic_ReadDataBlock(9, data)) {
-            activeStatus = String((char *)data).toInt();
-            
-          }
+        if (authenticateAndReadBlock(uid, uidLength, 9, data)) {
+            activeStatus = atoi((char *)data); // Parse as needed
         }
-        return true;
+        return true; // Indicate successful read
     } else {
-        return false;
+        return false; // Indicate failure to read
     }
 }
+
 
 bool writeDataToNFC(int productID, String productName, int productType, int supplierID, int activeStatus) {
   uint8_t success;
@@ -162,7 +138,7 @@ bool writeDataToNFC(int productID, String productName, int productType, int supp
     uint8_t blockProductType = 7;
     uint8_t blockSupplierID = 8;
     uint8_t blockActiveStatus = 9;
-
+    
     // Authenticate and write product name
     // Authenticate and write product name
     if (!authenticateAndWriteBlock(uid, uidLength, blockProductName, productName)) {
@@ -230,3 +206,37 @@ bool authenticateAndWriteBlock(uint8_t* uid, uint8_t uidLength, uint8_t block, S
     return false;
   }
 }
+
+bool authenticateAndReadBlock(uint8_t* uid, uint8_t uidLength, uint8_t block, byte buffer[16]) {
+  uint8_t keya[6] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF }; // Default key for authentication
+  byte data[16]; // Buffer to store the block data
+
+  if (nfc.mifareclassic_AuthenticateBlock(uid, uidLength, block, 0, keya)) {
+    Serial.print("Authentication successful for block ");
+    Serial.println(block);
+
+    if (nfc.mifareclassic_ReadDataBlock(block, buffer)) {
+      Serial.print("Block ");
+      Serial.print(block);
+      Serial.println(" data (HEX): ");
+      for (uint8_t i = 0; i < 16; i++) {
+        if (buffer[i] < 0x10) {
+          Serial.print("0"); // Print leading zero for single hex digit values
+        }
+        Serial.print(buffer[i], HEX);
+        Serial.print(" ");
+      }
+      Serial.println();
+      return true;
+    } else {
+      Serial.println("Read failed for block " + String(block));
+      return false;
+    }
+  } else {
+    Serial.println("Authentication failed for block " + String(block));
+    Serial.println(block);
+    return false;
+  }
+}
+
+
