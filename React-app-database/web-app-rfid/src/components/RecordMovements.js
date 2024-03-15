@@ -12,14 +12,34 @@ const RecordMovements = () => {
     try {
       // Code to activate the NFC reader and scan the tag
       // You need to implement the integration with your NFC reader here.
-      const scannedProductID = 'scanned_product_id_from_nfc'; // Placeholder
-      setProductID(scannedProductID);
+      // For demonstration purposes, let's assume the scanned product ID is fetched from the NFC tag
+      const responseESP = await axios.get('/arduino/read');
+      if (responseESP.status === 200) {
+        const scannedProductID = responseESP.data.productID;
+        setProductID(scannedProductID);
+        setMessage('NFC tag scanned successfully.');
+      } else {
+        setMessage('Failed to read data from NFC tag.');
+      }
+  
       // Also, fetch the current weight from the weight sensor
+      try {
+        const responseWeight = await axios.get('/arduino/weight');
+        if (responseWeight.status === 200) {
+          setWeight(responseWeight.data.weight);
+          console.log('Weight received from Arduino: ' + responseWeight.data.weight);
+        } else {
+          setError('Failed to fetch weight from Arduino.');
+        }
+      } catch (error) {
+        setError('Error fetching weight from Arduino: ' + error.message);
+      }
     } catch (err) {
       setError('Failed to scan NFC tag.');
     }
   };
-
+  
+  
   // Function to record the movement of the product
   const recordMovement = async (mode) => {
     try {

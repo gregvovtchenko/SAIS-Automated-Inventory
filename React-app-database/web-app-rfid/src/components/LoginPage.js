@@ -4,10 +4,22 @@ function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleSubmit = (event) => {
-    event.preventDefault();
-    // Handle login logic here, e.g., by sending a request to your backend
-    console.log('Login Submitted', { email, password });
+  const handleSubmit = async (e) => {
+    e.preventDefault(); // Prevents the default form submission
+    try {
+      const response = await axios.post('/api/loginUser', { 
+        email, 
+        password
+      });
+      if (response.status === 200) {
+        setMessage('Login successful.');
+      } else {
+        setMessage('Failed to login user.');
+      }
+    } catch (error) {
+      setMessage(`Error logging in user: ${error.response?.data?.message || 'User might not exist or password is incorrect.'}`);
+    }
+    setTimeout(() => setMessage(''), 5000);
   };
 
   return (

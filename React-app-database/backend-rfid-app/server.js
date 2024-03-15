@@ -16,7 +16,7 @@ app.use(cors());
 app.use(bodyParser.json());
 
 // Define the port from environment variable or fallback to default
-const PORT = process.env.PORT || 3002;
+const PORT = process.env.PORT || 3001;
 
 // Database pool configuration
 const pool = mysql.createPool({
@@ -223,6 +223,7 @@ app.get('/fetchItemMovements', async (req, res) => {
 
 // USER INFO
 
+// Register User
 app.post('/registerUser', async (req, res) => {
   const { userName, passwordHash, roleName } = req.body; // Ensure these match your frontend
 
@@ -246,3 +247,36 @@ app.post('/registerUser', async (req, res) => {
   }
 });
 
+
+// Login User
+app.post('/loginUser', async (req, res) => {
+  const { userName, password } = req.body; // Assuming the frontend sends 'password' instead of 'passwordHash'
+
+  try {
+    // Check if the user exists in the database
+    const checkSql = 'SELECT * FROM Users WHERE userName = ?';
+    const user = await executeQuery(checkSql, [userName]);
+
+    if (user.length === 0) {
+      res.status(404).json({ message: 'User not found.' });
+      return;
+    }
+
+    // Check if the password matches the hashed password
+    const hashedPassword = user[0].passwordHash;
+    const isPasswordMatch = await bcrypt.compare(password, hashedPassword);
+
+    if (!isPasswordMatch) {
+      res.status(401).json({ message: 'Incorrect password.' });
+      return;
+    }
+
+    // Password is correct, user is logged in
+    res.json({ message: 'Login successful.' });
+  } catch (error) {
+    console.error('Error logging in user:', error.message);
+    res.status(500).send('Server error');
+  }
+});
+
+// Record Movements
