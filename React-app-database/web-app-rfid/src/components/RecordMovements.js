@@ -43,36 +43,39 @@ const RecordMovements = () => {
   // Function to record the movement of the product
   const recordMovement = async (mode) => {
     try {
-      // Send data to the backend API to record the movement
-        // You need to implement the API call here.
-  // The `mode` will determine whether the product is being added or removed.
-  // `amount` should be the quantity being added or removed.
+      // Check if the mode is "Staff"
+      if (mode === "Staff") {
+        setError('Access Denied: Mode "Staff" is not allowed.');
+        return;
+      }
   
-  const response = await fetch(`/api/recordMovement`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      productID,
-      amount,
-      mode, // 'add' or 'remove'
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error('Failed to record movement');
-  }
-
-  const result = await response.json();
-  setSuccessMessage(result.message);
-  // Reset the form or state as needed
-  setProductID('');
-  setAmount(0);
-} catch (err) {
-  setError(err.message);
-}
+      // Send data to the backend API to record the movement
+      const response = await fetch(`/api/recordMovement`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          productID,
+          amount,
+          mode, // 'add' or 'remove'
+        }),
+      });
+  
+      if (!response.ok) {
+        throw new Error('Failed to record movement');
+      }
+  
+      const result = await response.json();
+      setSuccessMessage(result.message);
+      // Reset the form or state as needed
+      setProductID('');
+      setAmount(0);
+    } catch (err) {
+      setError(err.message);
+    }
   };
+
 return (
     <div>
     <h2>Record Movements</h2>

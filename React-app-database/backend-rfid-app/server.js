@@ -280,3 +280,25 @@ app.post('/loginUser', async (req, res) => {
 });
 
 // Record Movements
+app.post('/api/recordMovement', async (req, res) => {
+  const { productID, amount, mode } = req.body;
+
+  try {
+    // Check if the mode is "Staff"
+    if (mode === "Staff") {
+      // Insert the movement record into the database
+      const insertSql = 'INSERT INTO Movements (productID, amount, mode) VALUES (?, ?, ?)';
+      await executeQuery(insertSql, [productID, amount, mode]);
+
+      res.status(200).json({ message: 'Movement recorded successfully.' });
+    } else {
+      res.status(403).json({ message: 'Access Denied: Only "Staff" mode is allowed.' });
+    }
+  } catch (error) {
+    console.error('Error recording movement:', error.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+
+
